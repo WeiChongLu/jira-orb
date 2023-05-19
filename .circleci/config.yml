@@ -20,7 +20,7 @@ workflows:
       - shellcheck/check:
           filters: *filters
       - orb-tools/publish:
-          orb_name: WeiChongLu/WeiChongLu-jira-orb
+          orb_name: weichonglu/WeiChongLu-jira-orb
           vcs_type: << pipeline.project.type >>
           requires:
             [orb-tools/lint, orb-tools/review, orb-tools/pack, shellcheck/check]
@@ -31,6 +31,6 @@ workflows:
       - orb-tools/continue:
           pipeline_number: << pipeline.number >>
           vcs_type: << pipeline.project.type >>
-          orb_name: WeiChongLu/WeiChongLu-jira-orb
+          orb_name: weichonglu/WeiChongLu-jira-orb
           requires: [orb-tools/publish]
           filters: *filters
