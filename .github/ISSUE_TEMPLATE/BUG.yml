@@ -16,7 +16,7 @@ body:
     attributes:
       label: "Orb version"
       description: |
-        Which version of `weichonglu/WeiChongLu-jira-orb` are you using?
+        Which version of `weichonglu/jira-orb` are you using?
       placeholder: "1.0.0"
 
   - type: textarea

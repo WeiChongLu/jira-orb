@@ -6,7 +6,7 @@ description: >
 usage:
   version: 2.1
   orbs:
-    jira-orb: weichonglu/WeiChongLu-jira-orb@1.2.3
+    jira-orb: weichonglu/jira-orb@1.2.3
   workflows:
     use-my-orb:
       jobs:
