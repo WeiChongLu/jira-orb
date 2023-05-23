@@ -10,4 +10,16 @@ usage:
   workflows:
     use-my-orb:
       jobs:
-        - jira-orb/<job-name>
+        - jira-orb/slack_start:
+            slack_path: https://hooks.slack.com/services/xxxxx/xxxxx/xxxxx
+            github_organization: WeiChongLu
+            jira_organization: waylontest
+        - jira-orb/jira_notify:
+            environment_type: development 
+            environment: dev  
+            job_type: deployment  
+            scan_commit_body: true
+        - jira-orb/slack_end:
+            slack_path: https://hooks.slack.com/services/xxxxx/xxxxx/xxxxx
+            github_organization: WeiChongLu
+            jira_organization: waylontest
