@@ -1,0 +1,21 @@
+description: >
+  This command echos "now running" message to Salck.
+parameters:
+  slack_path:
+    type: env_var_name
+    description: "Webhook URL for Your Workspace. https://api.slack.com/messaging/webhooks"
+    default: SLACK_PATH
+  github_organization:
+    type: string
+    description: "Github Organization Name"
+  jira_organization:
+    type: string
+    description: "Jira Organization Name"
+steps:
+  - run:
+      environment:
+        PARAM_SLACK_PATH: <<parameters.slack_path>>
+        PARAM_GITHUB_ORGANIZATION: <<parameters.github_organization>>
+        PARAM_JIRA_ORGANIZATION: <<parameters.jira_organization>>
+      name: Send end message to slack
+      command: <<include(scripts/slack/end.sh)>>
