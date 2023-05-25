@@ -12,6 +12,8 @@ parameters:
     type: string
     description: "Jira Organization Name"
 steps:
+  - jq/install:
+      when: always
   - run:
       environment:
         PARAM_SLACK_PATH: <<parameters.slack_path>>

@@ -1,3 +1,27 @@
+GET_JIRA_INFO() {
+JIRA_ID=$1
+JIRA_AUTH='Basic ZWR3aW56aG91QGNoZXJyeXBpY2tzLmNvbTpBVEFUVDN4RmZHRjBGdnhXczBCN3hTbXVFMXJXVS1zZE9BSEQzZWw5VmxNWXA1UWlSbW5xYm9uYW1QLWRWQ0Zwc1FfVjhGdmpyVFQxWmxtVElXdFA3dWZxRlpDSVRPR05iWC1QT0JoTHloZzlNa1NsaVF6OVhjWU91R1VSbXdfM29nX092ZUNzSTF3Z2NnTG5UY1ZDdGl5dUswSGRKakE2bUY3VkJjdE52eVBYOU52cEFWNld1NEE9N0Y0ODdDM0I='
+JIRA_INFO_DATA=$(curl -X GET -H 'Content-type: application/json' -H "Authorization: $JIRA_AUTH" "https://waylontest.atlassian.net/rest/api/3/issue/$JIRA_ID")
+echo $JIRA_INFO_DATA
+}
+
+GET_JIRA_EPIC() {
+IS_SUBTASK=true
+JIRA_ID=$1
+EPIC_SUMMARY=""
+while [ "$IS_SUBTASK" = true ]; do
+  JIRA_INFO=$(GET_JIRA_INFO $JIRA_ID)
+  IS_SUBTASK=$(echo $JIRA_INFO | jq -r '.fields.issuetype.subtask')
+  if [ "$IS_SUBTASK" = true ]; then
+    JIRA_ID=$(echo $JIRA_INFO | jq -r '.fields.parent.key')
+  else
+    IS_SUBTASK=false
+    EPIC_SUMMARY=$(echo $JIRA_INFO | jq '.fields.parent.fields.summary')
+  fi
+done
+echo $EPIC_SUMMARY
+}
+
 # define constant
 SLACK_PATH=$(circleci env subst "${!PARAM_SLACK_PATH}")
 GITHUB_ORGANIZATION=$(circleci env subst "${PARAM_GITHUB_ORGANIZATION}")
@@ -24,27 +48,35 @@ fi
 
 # find branches between previous deployment and now
 TAG_COMMIT_ID=$(git rev-list -n 1 $(git tag --sort=-creatordate | grep $TAG_ENV_KEY | awk 'NR==2{print $0}'))
-BRANCHES=$(git log --merges --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..master)
+BRANCHES=$(git log --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..master)
 
 # parse each branch
 IFS=$'\n'
 DETAIL=$(echo "$BRANCHES" | while read LINE; do
   PR=$(echo $LINE | sed -n 's/[^#]*#\([0-9]*\).*/\1/p')
   BRANCH=$(echo $LINE | sed -n 's#.*/\([^/]*\)$#\1#p')
-  BRANCH=$(echo "$BRANCH" | sed 's/#//g')
-  JIRA=$(echo $BRANCH | grep -oE '[A-Z]{2,30}-[0-9]+')
+  if [ -n "$BRANCH" ]; then 
+    BRANCH=$(echo "$BRANCH" | sed 's/#//g')
+    JIRA=$(echo $BRANCH | grep -oE '[A-Z]{2,30}-[0-9]+')
+  else
+    JIRA=$(echo $LINE | grep -oE '[A-Z]{2,30}-[0-9]+' | head -n 1)
+    BRANCH=$JIRA
+  fi
   if [ "${#PR}" -eq 0 ]; then
     PR_STR=""
   else
     PR_LINK=$(echo "https://github.com/$GITHUB_ORGANIZATION/$REPO_NAME/pull/$PR")
     PR_STR=$(echo " [<$PR_LINK|#$PR>]")
-    if [ -n "$JIRA" ]; then
-      BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
-    else
-      BRANCH_STR=$BRANCH
-    fi
   fi
-  echo "\n •${PR_STR} Branch: ${BRANCH_STR}"
+  if [ -n "$JIRA" ]; then
+    BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
+    EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA)
+    if [ -n "$EPIC_SUMMARY"]; then
+      echo "\n •${PR_STR} Branch: ${BRANCH_STR} (Epic: $EPIC_SUMMARY)"
+    else
+      echo "\n •${PR_STR} Branch: ${BRANCH_STR}"
+    fi
+  fi 
 done)
 
 # send message
