@@ -5,6 +5,10 @@ parameters:
     type: env_var_name
     description: "Webhook URL for Your Workspace. https://api.slack.com/messaging/webhooks"
     default: SLACK_PATH
+  jira_auth:
+    type: env_var_name
+    description: "Jira Auth Token. https://developer.atlassian.com/cloud/jira/platform/basic-auth-for-rest-apis/"
+    default: JIRA_AUTH
   github_organization:
     type: string
     description: "Github Organization Name"
@@ -17,6 +21,7 @@ steps:
   - run:
       environment:
         PARAM_SLACK_PATH: <<parameters.slack_path>>
+        PARAM_JIRA_AUTH: <<parameters.jira_auth>>
         PARAM_GITHUB_ORGANIZATION: <<parameters.github_organization>>
         PARAM_JIRA_ORGANIZATION: <<parameters.jira_organization>>
       name: Send end message to slack

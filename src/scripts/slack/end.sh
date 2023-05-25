@@ -1,16 +1,17 @@
 GET_JIRA_INFO() {
-JIRA_ID=$1
-JIRA_AUTH='Basic ZWR3aW56aG91QGNoZXJyeXBpY2tzLmNvbTpBVEFUVDN4RmZHRjBGdnhXczBCN3hTbXVFMXJXVS1zZE9BSEQzZWw5VmxNWXA1UWlSbW5xYm9uYW1QLWRWQ0Zwc1FfVjhGdmpyVFQxWmxtVElXdFA3dWZxRlpDSVRPR05iWC1QT0JoTHloZzlNa1NsaVF6OVhjWU91R1VSbXdfM29nX092ZUNzSTF3Z2NnTG5UY1ZDdGl5dUswSGRKakE2bUY3VkJjdE52eVBYOU52cEFWNld1NEE9N0Y0ODdDM0I='
-JIRA_INFO_DATA=$(curl -X GET -H 'Content-type: application/json' -H "Authorization: $JIRA_AUTH" "https://waylontest.atlassian.net/rest/api/3/issue/$JIRA_ID")
+JIRA_AUTH=$1
+JIRA_ID=$2
+JIRA_INFO_DATA=$(curl -X GET -H 'Content-type: application/json' -H "Authorization: Basic $JIRA_AUTH" "https://waylontest.atlassian.net/rest/api/3/issue/$JIRA_ID")
 echo $JIRA_INFO_DATA
 }
 
 GET_JIRA_EPIC() {
 IS_SUBTASK=true
-JIRA_ID=$1
+JIRA_AUTH=$1
+JIRA_ID=$2
 EPIC_SUMMARY=""
 while [ "$IS_SUBTASK" = true ]; do
-  JIRA_INFO=$(GET_JIRA_INFO $JIRA_ID)
+  JIRA_INFO=$(GET_JIRA_INFO $JIRA_AUTH $JIRA_ID)
   IS_SUBTASK=$(echo $JIRA_INFO | jq -r '.fields.issuetype.subtask')
   if [ "$IS_SUBTASK" = true ]; then
     JIRA_ID=$(echo $JIRA_INFO | jq -r '.fields.parent.key')
@@ -24,6 +25,7 @@ echo $EPIC_SUMMARY
 
 # define constant
 SLACK_PATH=$(circleci env subst "${!PARAM_SLACK_PATH}")
+JIRA_AUTH=$(circleci env subst "${!PARAM_JIRA_AUTH}")
 GITHUB_ORGANIZATION=$(circleci env subst "${PARAM_GITHUB_ORGANIZATION}")
 JIRA_ORGANIZATION=$(circleci env subst "${PARAM_JIRA_ORGANIZATION}")
 
@@ -70,7 +72,7 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
   fi
   if [ -n "$JIRA" ]; then
     BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
-    EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA)
+    EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA_AUTH $JIRA)
     if [ -n "$EPIC_SUMMARY" ]; then
       echo "\n •${PR_STR} Branch: ${BRANCH_STR} (Epic: $EPIC_SUMMARY)"
     else
