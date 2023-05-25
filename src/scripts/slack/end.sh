@@ -71,7 +71,7 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
   if [ -n "$JIRA" ]; then
     BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
     EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA)
-    if [ -n "$EPIC_SUMMARY"]; then
+    if [ -n "$EPIC_SUMMARY" ]; then
       echo "\n •${PR_STR} Branch: ${BRANCH_STR} (Epic: $EPIC_SUMMARY)"
     else
       echo "\n •${PR_STR} Branch: ${BRANCH_STR}"
