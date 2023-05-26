@@ -78,11 +78,18 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
     BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
     EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA_AUTH $JIRA)
     if [ -n "$EPIC_SUMMARY" ] && [ "$EPIC_SUMMARY" != "null" ]; then
-      echo "\n •${PR_STR} Branch: ${BRANCH_STR} (Epic: $EPIC_SUMMARY)"
+      echo "\n  •${PR_STR} Branch: ${BRANCH_STR} (Epic: $EPIC_SUMMARY)"
     else
-      echo "\n •${PR_STR} Branch: ${BRANCH_STR}"
+      echo "\n  •${PR_STR} Branch: ${BRANCH_STR} (No Epic)"
     fi
   fi 
+done)
+
+EPIC_LIST=$(echo "$DETAIL" | sed -n 's/.*(\([^)]*\)).*/\1/p' | sort -u)
+DETAIL=$(echo "$EPIC_LIST" | while read -r EPIC;
+do
+    echo "\n $EPIC"
+    echo "$DETAIL" | sed -n "s/^\(.*\) ($EPIC)$/\1/p"
 done)
 
 # send message
