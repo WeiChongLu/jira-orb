@@ -37,19 +37,23 @@ CURR_TAG=$(git describe --exact-match --all HEAD)
 # determine environment
 ENVIRONMENT='DEV'
 TAG_ENV_KEY='staging-v'
+NUMBER=1
 if echo $CURR_TAG | grep -q "prod-v"; then
   ENVIRONMENT='PROD'
   TAG_ENV_KEY='prod-v'
+  NUMBER=2
 elif echo $CURR_TAG | grep -q "staging-v"; then
   ENVIRONMENT='STAGING'
   TAG_ENV_KEY='staging-v'
+  NUMBER=2
 else 
   ENVIRONMENT='DEV'
   TAG_ENV_KEY='staging-v'
+  NUMBER=1
 fi
 
 # find branches between previous deployment and now
-TAG_COMMIT_ID=$(git rev-list -n 1 $(git tag --sort=-creatordate | grep $TAG_ENV_KEY | awk 'NR==2{print $0}'))
+TAG_COMMIT_ID=$(git rev-list -n 1 $(git tag --sort=-creatordate | grep $TAG_ENV_KEY | awk "NR==$NUMBER{print \$0}"))
 BRANCHES=$(git log --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..master)
 
 # parse each branch
