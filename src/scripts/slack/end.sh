@@ -57,6 +57,7 @@ TAG_COMMIT_ID=$(git rev-list -n 1 $(git tag --sort=-creatordate | grep $TAG_ENV_
 BRANCHES=$(git log --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..master)
 
 # parse each branch
+UNIQUE_JIRA_IDS=()
 IFS=$'\n'
 DETAIL=$(echo "$BRANCHES" | while read LINE; do
   PR=$(echo $LINE | sed -n 's/[^#]*#\([0-9]*\).*/\1/p')
@@ -74,7 +75,8 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
     PR_LINK=$(echo "https://github.com/$GITHUB_ORGANIZATION/$REPO_NAME/pull/$PR")
     PR_STR=$(echo " [<$PR_LINK|#$PR>]")
   fi
-  if [ -n "$JIRA" ]; then
+  if [ -n "$JIRA" ] && [[ ! "${UNIQUE_JIRA_IDS[@]}" =~ "$JIRA" ]]; then
+    UNIQUE_JIRA_IDS+=("$JIRA")
     BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
     EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA_AUTH $JIRA)
     if [ -n "$EPIC_SUMMARY" ] && [ "$EPIC_SUMMARY" != "null" ]; then
