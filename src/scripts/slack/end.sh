@@ -61,6 +61,7 @@ BRANCHES=$(git log --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..$CURR_BRA
 
 # parse each branch
 UNIQUE_JIRA_IDS=()
+UNIQUE_BRANCHES=()
 IFS=$'\n'
 DETAIL=$(echo "$BRANCHES" | while read LINE; do
   PR=$(echo $LINE | sed -n 's/[^#]*#\([0-9]*\).*/\1/p')
@@ -87,6 +88,9 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
     else
       echo "\n  •${PR_STR} Branch: ${BRANCH_STR} (No Epic)"
     fi
+  elif [ -z "$JIRA" ] && [ -n "$BRANCH" ] && [[ ! "${UNIQUE_BRANCHES[@]}" =~ "$BRANCH" ]]; then
+    UNIQUE_BRANCHES+=("$BRANCH")
+    echo "\n  •${PR_STR} Branch: $BRANCH (Unknown Epic)"
   fi 
 done)
 
