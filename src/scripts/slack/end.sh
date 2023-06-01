@@ -1,17 +1,19 @@
 GET_JIRA_INFO() {
 JIRA_AUTH=$1
-JIRA_ID=$2
-JIRA_INFO_DATA=$(curl -X GET -H 'Content-type: application/json' -H "Authorization: Basic $JIRA_AUTH" "https://waylontest.atlassian.net/rest/api/3/issue/$JIRA_ID")
+JIRA_ORGANIZATION=$2
+JIRA_ID=$3
+JIRA_INFO_DATA=$(curl -X GET -H 'Content-type: application/json' -H "Authorization: Basic $JIRA_AUTH" "https://$JIRA_ORGANIZATION.atlassian.net/rest/api/3/issue/$JIRA_ID")
 echo $JIRA_INFO_DATA
 }
 
 GET_JIRA_EPIC() {
 IS_SUBTASK=true
 JIRA_AUTH=$1
-JIRA_ID=$2
+JIRA_ORGANIZATION=$2
+JIRA_ID=$3
 EPIC_SUMMARY=""
 while [ "$IS_SUBTASK" = true ]; do
-  JIRA_INFO=$(GET_JIRA_INFO $JIRA_AUTH $JIRA_ID)
+  JIRA_INFO=$(GET_JIRA_INFO $JIRA_AUTH $JIRA_ORGANIZATION $JIRA_ID)
   IS_SUBTASK=$(echo $JIRA_INFO | jq -r '.fields.issuetype.subtask')
   if [ "$IS_SUBTASK" = true ]; then
     JIRA_ID=$(echo $JIRA_INFO | jq -r '.fields.parent.key')
@@ -32,6 +34,7 @@ JIRA_ORGANIZATION=$(circleci env subst "${PARAM_JIRA_ORGANIZATION}")
 # find basic variables
 REPO_NAME=$(git config --get remote.origin.url |  sed 's#.*/\([^.]*\)\.git#\1#')
 COMMIT_ID=$(git rev-parse --short HEAD)
+CURR_BRANCH=$(git branch --show-current)
 CURR_TAG=$(git describe --exact-match --all HEAD)
 
 # determine environment
@@ -54,7 +57,7 @@ fi
 
 # find branches between previous deployment and now
 TAG_COMMIT_ID=$(git rev-list -n 1 $(git tag --sort=-creatordate | grep $TAG_ENV_KEY | awk "NR==$NUMBER{print \$0}"))
-BRANCHES=$(git log --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..master)
+BRANCHES=$(git log --pretty=format:'%s' --first-parent $TAG_COMMIT_ID..$CURR_BRANCH)
 
 # parse each branch
 UNIQUE_JIRA_IDS=()
@@ -64,9 +67,9 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
   BRANCH=$(echo $LINE | sed -n 's#.*/\([^/]*\)$#\1#p')
   if [ -n "$BRANCH" ]; then 
     BRANCH=$(echo "$BRANCH" | sed 's/#//g')
-    JIRA=$(echo $BRANCH | grep -oE '[A-Z]{2,30}-[0-9]+')
+    JIRA=$(echo $BRANCH | grep -oE '[A-Z0-9]{2,30}-[0-9]+')
   else
-    JIRA=$(echo $LINE | grep -oE '[A-Z]{2,30}-[0-9]+' | head -n 1)
+    JIRA=$(echo $LINE | grep -oE '[A-Z0-9]{2,30}-[0-9]+' | head -n 1)
     BRANCH=$JIRA
   fi
   if [ "${#PR}" -eq 0 ]; then
@@ -78,7 +81,7 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
   if [ -n "$JIRA" ] && [[ ! "${UNIQUE_JIRA_IDS[@]}" =~ "$JIRA" ]]; then
     UNIQUE_JIRA_IDS+=("$JIRA")
     BRANCH_STR="<https://$JIRA_ORGANIZATION.atlassian.net/browse/$JIRA|$BRANCH>"
-    EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA_AUTH $JIRA)
+    EPIC_SUMMARY=$(GET_JIRA_EPIC $JIRA_AUTH $JIRA_ORGANIZATION $JIRA)
     if [ -n "$EPIC_SUMMARY" ] && [ "$EPIC_SUMMARY" != "null" ]; then
       echo "\n  •${PR_STR} Branch: ${BRANCH_STR} (Epic: $EPIC_SUMMARY)"
     else
