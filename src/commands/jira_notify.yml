@@ -33,6 +33,14 @@ parameters:
     description: Whether or not to scan the Commit Body for the JIRA Issue Tag. Default is false.
     default: false
     type: boolean
+  oidc_token:
+    description: Customize the OpenID Connect token used to authenticate with Jira. This most often will not need to be changed.
+    type: string
+    default: "CIRCLE_OIDC_TOKEN_V2"
+  webhook_url:
+    description: Get your webhook URL from the management panel in the CircleCI for Jira app in Atlassian.
+    type: string
+    default: "JIRA_WEBHOOK_URL"
 
 steps:
   - jq/install:
@@ -73,7 +81,8 @@ steps:
           if [[ -n "${ISSUE_KEYS}" || -n "${HAS_JSD_SERVICE_ID}" ]]; then
             check_workflow_status
             generate_json_payload_<<parameters.job_type>>
-            post_to_jira
+            verifyVars
+            postForge
           else
               # If no service is or issue key is found.
             echo "No Jira issue keys found in commit subjects or branch name, skipping."
@@ -314,6 +323,64 @@ steps:
           echo
           echo "Success!"
         }
+
+        # Post the payload to the CircleCI for Jira Forge app
+        postForge() {
+          COUNT=${2:-1}
+          echo "Posting payload to CircleCI for Jira Forge app"
+          FORGE_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: ${<<parameters.oidc_token>>}" \
+            -X POST "${<<parameters.webhook_url>>}" --data @/tmp/jira-status.json)
+          HTTP_BODY=$(echo "$FORGE_RESPONSE" | sed -e '$d')
+          HTTP_STATUS=$(echo "$FORGE_RESPONSE" | tail -n 1)
+          MSG=$(printf "HTTP Status: %s\nHTTP Body: %s\n" "$HTTP_STATUS" "$HTTP_BODY")
+          echo "$MSG"
+
+          # Check for errors
+          if ! JIRA_ERRORS="$(echo "$HTTP_BODY" | jq -r '..|select(type == "object" and (has("errors") or has("error")))|(.errors // .error)')";then
+            echo "Error parsing response"
+            errorOut 1
+          fi
+          if [[ "$HTTP_STATUS" -gt 299 || ${#JIRA_ERRORS} -gt 0 ]]; then
+            printf "\nError posting payload to CircleCI for Jira Forge app\n"
+            echo "  HTTP Status: $HTTP_STATUS"
+            echo "  Errors:"
+            echo "$JIRA_ERRORS" | jq '.'
+          fi
+          if [[ "$HTTP_STATUS" -gt 299 && "$HTTP_STATUS" -lt 399 ]] && [[ "$COUNT" -lt 5 ]]; then
+            echo "Retrying... ($((COUNT + 1)))"
+            sleep 3
+            postForge "$((COUNT + 1))"
+          elif [[ "$HTTP_STATUS" -gt 399 ]]; then
+            errorOut 1
+          fi
+        }
+
+        # Verify any values that need to be present before continuing
+        verifyVars() {
+          MSG=$(printf "OIDC Token: %s\nWebhook URL: %s\nEnvironment: %s\n" "${<<parameters.oidc_token>>}" "${<<parameters.webhook_url>>}" "<<parameters.environment>>")
+          echo "$MSG"
+
+          if [[ -z "${<<parameters.oidc_token>>}" ]]; then
+            echo "'oidc_token' parameter is required"
+            exit 1 # Critical error, do not skip
+          fi
+          
+          if ! [[ "${<<parameters.webhook_url>>}" =~ ^https:\/\/([a-zA-Z0-9.-]+\.[A-Za-z]{2,6})(:[0-9]{1,5})?(\/.*)?$ ]]; then
+            echo "  Please check the value of the 'webhook_url' parameter and ensure it contains a valid URL or a valid environment variable"
+            echo "  Value: ${<<parameters.webhook_url>>}"
+            exit 1 # Critical error, do not skip
+          fi
+
+          if [[ -z "<<parameters.environment>>" ]]; then
+            echo "'environment' parameter is required"
+            echo "  Value: <<parameters.environment>>"
+            exit 1 # Critical error, do not skip
+          fi
+
+        }
+        
 
         # kick off
         source <<parameters.state_path>>
