@@ -116,7 +116,7 @@ steps:
           fetch https://circleci.com/api/v1.1/project/${VCS_TYPE}/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM} /tmp/job_info.json
           # see https://jqplay.org/s/TNq7c5ctot
           ISSUE_KEYS=$(cat /tmp/job_info.json | jq '[.all_commit_details[].subject | scan("(<<parameters.issue_regexp>>)")   | .[] ] + [.all_commit_details[].branch | scan("(<<parameters.issue_regexp>>)")   | .[] ] + [if .branch then .branch else "" end | scan("(<<parameters.issue_regexp>>)")  | . [] ] + [if <<parameters.scan_commit_body>> then .all_commit_details[].body else "" end | scan("(<<parameters.issue_regexp>>)")   | .[] ]')
-          if [ -z "$ISSUE_KEYS" ]; then
+          if [ -z "$ISSUE_KEYS" ] || [ "$ISSUE_KEYS" == "[]" ]; then
             # No issue keys found.
             echo "No issue keys found. This build does not contain a match for a Jira Issue. Please add your issue ID to the commit message or within the branch name."
             exit 0
@@ -140,11 +140,11 @@ steps:
             BRANCHES=$(git log --pretty=format:'%s' --first-parent $PREVIOUS_TAG_COMMIT_ID..$MAIN_BRANCHE)
           fi
           echo "Branches: $BRANCHES"
-          if [ -z "$BRANCHES" ]; then
+          if [ -z "$BRANCHES" ] || [[ ! $BRANCHES =~ <<parameters.issue_regexp>> ]]; then
             # No issue keys found.
             echo "No issue keys found. This build does not contain a match for a Jira Issue. Please add your issue ID to the commit message or within the branch name."
             exit 0
-          fi
+          fi 
           ISSUE_INFO=$(echo $BRANCHES | grep -oE '<<parameters.issue_regexp>>')
           ISSUE_KEYS=$(echo "$ISSUE_INFO" | jq -R -s 'split("\n") | map(select(. != "")) | unique')
           if [ -z "$ISSUE_KEYS" ]; then
