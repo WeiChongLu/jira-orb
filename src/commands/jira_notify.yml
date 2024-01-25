@@ -71,18 +71,12 @@ steps:
 
         run () {
           verify_api_key
+          parse_jira_key_array_tag
           # if [ "<<parameters.environment_type>>" == "development" ]; then
           #   parse_jira_key_array
           # else
           #   parse_jira_key_array_tag
           # fi
-          if [ -n "$CIRCLE_TAG" ]; then
-            echo 'Parse tag'
-            parse_jira_key_array_tag
-          else
-            echo 'Parse branch'
-            parse_jira_key_array
-          fi
           HAS_JSD_SERVICE_ID="<< parameters.service_id >>"
             # If you have either an issue key or a service ID
           if [[ -n "${ISSUE_KEYS}" || -n "${HAS_JSD_SERVICE_ID}" ]]; then
