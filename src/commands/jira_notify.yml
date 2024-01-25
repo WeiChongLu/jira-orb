@@ -71,12 +71,11 @@ steps:
 
         run () {
           verify_api_key
-          parse_jira_key_array_tag
-          # if [ "<<parameters.environment_type>>" == "development" ]; then
-          #   parse_jira_key_array
-          # else
-          #   parse_jira_key_array_tag
-          # fi
+          if [ "<<parameters.environment_type>>" == "development" ]; then
+            parse_jira_key_array
+          else
+            parse_jira_key_array_tag
+          fi
           HAS_JSD_SERVICE_ID="<< parameters.service_id >>"
             # If you have either an issue key or a service ID
           if [[ -n "${ISSUE_KEYS}" || -n "${HAS_JSD_SERVICE_ID}" ]]; then
@@ -128,14 +127,9 @@ steps:
 
         parse_jira_key_array_tag () {
           # must save as ISSUE_KEYS='["CC-4"]'
-          # MAIN_BRANCHE=master
-          # git checkout $MAIN_BRANCHE
-          # git branch
-          CURR_COMMENT_ID=$(git rev-list -n 1 ${CIRCLE_TAG})
-          BRANCH_INFO=$(git branch -a --contains $CURR_COMMENT_ID)
-          MAIN_BRANCHE=$(echo "$BRANCH_INFO" | awk '/remotes\/origin\// {branch=$NF} END {print branch}' | awk -F'/' '{print $NF}')
-          echo "Current branch: $MAIN_BRANCHE"
+          MAIN_BRANCHE=master
           git checkout $MAIN_BRANCHE
+          git branch
           git pull
           PREVIOUS_TAG=$(git tag --sort=-creatordate | grep '<<parameters.environment>>-v' | awk 'NR==2{print $0}')
           echo "Previous tag: $PREVIOUS_TAG"
