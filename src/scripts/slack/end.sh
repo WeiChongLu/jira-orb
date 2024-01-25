@@ -67,9 +67,9 @@ DETAIL=$(echo "$BRANCHES" | while read LINE; do
   BRANCH=$(echo $LINE | sed -n 's#.*/\([^/]*\)$#\1#p')
   if [ -n "$BRANCH" ]; then 
     BRANCH=$(echo "$BRANCH" | sed 's/#//g')
-    JIRA=$(echo $BRANCH | grep -oE '[A-Z0-9]{2,30}-[0-9]+')
+    JIRA=$(echo $BRANCH | grep -oE '[A-Za-z0-9]{2,30}-[0-9]+' | tr '[:lower:]' '[:upper:]')
   else
-    JIRA=$(echo $LINE | grep -oE '[A-Z0-9]{2,30}-[0-9]+' | head -n 1)
+    JIRA=$(echo $LINE | grep -oE '[A-Za-z0-9]{2,30}-[0-9]+' | head -n 1 | tr '[:lower:]' '[:upper:]')
     BRANCH=$JIRA
   fi
   if [ "${#PR}" -eq 0 ]; then
